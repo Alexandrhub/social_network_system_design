@@ -1,0 +1,680 @@
+openapi: 3.0.3
+info:
+  title: Swagger social network for travelers - OpenAPI 3.0
+  description: |-
+    REST API Методы для социальной сети для путешественников.
+  version: 1.0.0
+tags:
+  - name: friend
+    description: Все что касается друзей
+  - name: user
+    description: Все что касается пользователей
+  - name: post
+    description: Все что касается постов
+  - name: feed
+    description: Все что касается лент
+  - name: chat
+    description: Все что касается чатов
+
+paths:
+  /login:
+    get:
+      tags:
+        - auth
+      summary: Авторизация
+      description: |-
+        Авторизация пользователя. В случае успеха - перенаправляет пользователя на URI указанное в параметре
+      operationId: loginUser
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: id пользователя
+          schema:
+            type: string
+        - name: redirectUri
+          in: query
+          required: false
+          description: |-
+            Возвращать пользователя на URI указанное в параметре. По умолчанию - на главную страницу
+      responses:
+        "302":
+          description: "URI которая была указана в параметре"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "500":
+          $ref: "#/components/responses/serverError"
+  /logout:
+    get:
+      tags:
+        - auth
+      summary: Выход
+      operationId: logoutUser
+      parameters:
+        - name: token
+          in: query
+          description: Токен для выхода
+          required: true
+      responses:
+        "200":
+          description: "Вы вышли из системы"
+  /friends:
+    post:
+      tags:
+        - friend
+      summary: Добавить друга
+      description: Добавление нового пользователя в список друзей
+      operationId: addFriend
+      requestBody:
+        description: |-
+          Пользователь, которого нужно добавить в список друзей(его id)
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewFriend"
+        required: true
+      responses:
+        "200":
+          $ref: "#/components/responses/friendResponse"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - friend
+      summary: Удаление друга
+      description: Удаление существующего пользователя из списка друзей
+      operationId: deleteFriend
+      parameters:
+        - name: friendId
+          in: query
+          description: Параметр для удаления друга
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          $ref: "#/components/responses/friendResponse"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          # Если пользователь пытается удалить друга, которого нет в списке друзей
+          $ref: "#/components/responses/notEnoughRights"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+  /friends/allUserFriends/{userId}:
+    get:
+      tags:
+        - friend
+      summary: Получить список друзей
+      description: Список всех друзей пользователя(по его id)
+      operationId: showAllFriends
+      parameters:
+        - name: userId
+          in: path
+          description: Id пользователя
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/allFriends"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+  /user-info/{userId}:
+    get:
+      tags:
+        - user
+      summary: Просмотр информации о пользователе
+      description: Просмотр домашней страницы пользователя по его id
+      operationId: userAboutPage
+      parameters:
+        - name: userId
+          in: path
+          description: Id пользователя
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/userAbout"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+  /user/user-post:
+    post:
+      tags:
+        - post
+      summary: Добавление нового поста
+      operationId: addNewPost
+      description: Новый пост в ленту
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Post"
+      responses:
+        "200":
+          $ref: "#/components/responses/addedNewPost"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+  /user/data:
+    post:
+      tags:
+        - post
+      summary: Загрузка медиа данных
+      operationId: loadPostData
+      description: Загрузка фото для поста
+      requestBody:
+        content:
+          multipart/form-data: # or use application/octet-stream
+            schema:
+              $ref: "#/components/schemas/MediaData"
+      responses:
+        "201":
+          description: Данные загружены
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - post
+      summary: Удаление поста
+      description: Удаление существующего поста пользователя
+      operationId: deletePost
+      parameters:
+        - name: postId
+          in: query
+          description: Параметр для удаления поста
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Пост был удален
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          # Если пользователь пытается удалить не свой пост.
+          $ref: "#/components/responses/notEnoughRights"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+  /feed/user/{userId}:
+    get:
+      tags:
+        - feed
+      summary: Посмотреть ленту пользователя
+      operationId: userFeed
+      description: Просмотр ленты пользователя по его id
+      parameters:
+        - name: userId
+          in: path
+          description: Id пользователя
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/userFeed"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+  /feed/home:
+    get:
+      tags:
+        - feed
+      summary: Домашняя лента
+      operationId: homeFeed
+      description: Просмотр домашней ленты
+      responses:
+        "200":
+          $ref: "#/components/responses/homeFeed"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+
+  /user/chats/{userId}:
+    get:
+      tags:
+        - chat
+      summary: Просмотр чатов
+      operationId: userMessages
+      description: |-
+        Здесь можно посмотреть чаты и сообщения пользователя
+         (на примере того что мы видим в TG или VK в сообщениях)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/userChats"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+  /user/chats/{userId}/messages:
+    get:
+      tags:
+        - chat
+      summary: Просмотр сообщений
+      description: |-
+        Просмотр сообщения по id чата
+      operationId: messageContent
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: chatId
+          in: query
+          required: true
+          description: id сообщений или чата
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/userMessages"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          # Если пользователь хочет посмотреть сообщения закрытого чата
+          $ref: "#/components/responses/notEnoughRights"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+  /user/chats/{userId}/message:
+    post:
+      tags:
+        - chat
+      summary: Отправка сообщения
+      description: |-
+        Отправка сообщения в чат
+      operationId: newMessage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageContent"
+      responses:
+        "200":
+          description: Сообщение отправлено
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          # Если чат только для чтения.
+          $ref: "#/components/responses/notEnoughRights"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+    delete:
+      tags:
+        - chat
+      summary: Удаление сообщения
+      description: Удаление существующего сообщения пользователя
+      operationId: deleteMessage
+      parameters:
+        - name: messageId
+          in: query
+          description: Параметр для удаления сообщения
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Сообщение было удалено
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "403":
+          # Если пользователь хочет удалить не свое сообщение
+          $ref: "#/components/responses/notEnoughRights"
+        "500":
+          $ref: "#/components/responses/serverError"
+      security:
+        - bearerAuth: []
+
+components:
+  schemas:
+    NewFriend:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+          format: uuid
+    Friend:
+      type: object
+      required:
+        - user_id
+        - name
+        - surname
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        surname:
+          type: string
+        age:
+          type: integer
+          format: int64
+        phone_number:
+          type: integer
+          format: int64
+        image:
+          type: string
+          description: хранит только имя/местоположение файла в базе данных
+        status:
+          type: string
+          enum:
+            - online
+            - offline
+    AboutPage:
+      type: object
+      required:
+        - user_id
+        - name
+        - surname
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        surname:
+          type: string
+        age:
+          type: integer
+          format: int64
+        phone_number:
+          type: integer
+          format: int64
+        image:
+          type: string
+          description: хранит только имя/местоположение файла в базе данных
+        friends:
+          type: array
+          items:
+            $ref: "#/components/schemas/Friend"
+        interests:
+          type: string
+        city:
+          type: string
+    Post:
+      type: object
+      required:
+        - post_id
+        - body
+        - author
+        - date_added
+      properties:
+        post_id:
+          type: string
+          format: uuid
+        body:
+          type: string
+        author:
+          description: Текущий пользователь
+          type: string
+          format: uuid
+        date_added:
+          type: string
+          format: date-time
+          description: Date of the post being created
+        image:
+          $ref: "#/components/schemas/MediaData"
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Comment"
+        hashtags:
+          type: array
+          items:
+            type: string
+        likes:
+          type: integer
+    MediaData:
+      type: object
+      description: данные файла
+      required:
+        - file
+      properties:
+        file:
+          type: array
+          items:
+            type: string
+            format: binary
+    MessageOverview:
+      type: object
+      description: о сообщении
+      required:
+        - message_name
+        - last_message
+        - last_message_date
+      properties:
+        message_name:
+          type: string
+          description: |-
+            Это может быть именем чата с другим пользователем или группой.
+        last_message:
+          type: string
+        last_message_date:
+          type: string
+          format: date-time
+        chat_image:
+          $ref: "#/components/schemas/MediaData"
+    MessageContent:
+      type: object
+      description: содержание сообщения
+      required:
+        - message_content
+        - delivered_time
+      properties:
+        message_content:
+          type: string
+        media_data:
+          $ref: "#/components/schemas/MediaData"
+        delivered_time:
+          type: string
+          format: date-time
+        user_image:
+          $ref: "#/components/schemas/MediaData"
+    Comment:
+      type: object
+      properties:
+        comment_id:
+          type: integer
+        date_added:
+          type: string
+          format: date-time
+        content:
+          type: string
+        author:
+          type: integer
+          description: id пользователя
+        likes:
+          type: integer
+    Error:
+      type: object
+      required:
+        - error_id
+        - message
+        - code
+        - msg_description
+      properties:
+        error_id:
+          description: уникальный идентификатор ошибки
+          type: string
+        message:
+          type: string
+          description: полное описание ошибки для разработчиков
+        code:
+          type: integer
+          description: http код ошибки
+        msg_description:
+          type: string
+          description: полное описание ошибки для пользователя
+
+  responses:
+    friendResponse:
+      description: Новый пользователь был добавлен в список друзей
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/NewFriend"
+    userAbout:
+      description: Страница о пользователе
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AboutPage"
+    addedNewPost:
+      description: Новый пост был добавлен
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Post"
+    homeFeed:
+      description: Домашняя лента
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Post"
+    userFeed:
+      description: User feed
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Post"
+    userChats:
+      description: Список чатов пользователя
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/MessageOverview"
+    userMessages:
+      description: Список сообщений пользователя
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/MessageContent"
+    allFriends:
+      description: Список друзей пользователя
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Friend"
+    badRequest:
+      description: Ответ при неправильном запросе
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    unauthorized:
+      description: Ответ если пользователь не авторизован
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    notEnoughRights:
+      description: Ответ если пользователь не имеет достаточных прав
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    notFound:
+      description: Ответ если пост не найден
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    serverError:
+      description: Ответ если произошла ошибка на сервере
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
